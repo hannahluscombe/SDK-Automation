@@ -1,0 +1,92 @@
+
+
+SCENARIOS = [] # list of scenario names from csv - extract using pandas 
+OUTPUT_FILES = [] # final files to be inputted into minfin (ie. CapaitalInvestment, AnnualFixedOperaingCost)
+
+rule all:
+    input:
+        # final files
+        # will probably be something like...
+        # expand("results/{scenario}/MinFin/{f}.csv", scenario=SCENARIO, f=OUTPUT_FILES)
+
+rule download_xlsx:
+    message:"Downloading xlsx [replace with wildcard] from Zenodo"
+    input:
+        # url of xlsx
+    output:
+        # downloaded xlsx in resources/
+    script: 
+        "scripts/download_xlsx.py"
+
+rule extract_data:
+    message:"Extracted txt data for [replace with wildcard]"
+    input:
+        # output of download_xlsx
+    output:
+        # txt file in nested folder of scenario name in results/
+    script: 
+        "scripts/extract_data.py"
+
+rule preprocess_data:
+    message:"Pre-processing data for [replace with wildcard]"
+    input:
+        # output of extract_data
+    output:
+        # txt file in nested folder of scenario name in results/
+    script: 
+        "scripts/preprocess.py"
+
+rule build_model:
+    message:"Building LP file for [replace with wildcard]"
+    params:
+        # path to OSeMOSYS model file
+    input:
+        # output of preprocess_data
+    output:
+        # LP file in results/
+        # will turn this to a temp file since these files can be large
+        # https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#protected-and-temporary-files
+    shell: 
+        # glpk command to build an LP file 
+
+rule solve_model:
+    message:"Solving model for [replace with wildcard]"
+    params:
+        # solver selection (cbc|gurobi|cplex)
+    input:
+        # output of build_model
+    output:
+        # solution file in results/
+        # will turn this to a temp file since these files can be large
+        # https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#protected-and-temporary-files
+    shell: 
+        # solver command to solve a model and write results to a file 
+
+rule process_results:
+    message:"Processing results for [replace with wildcard]"
+    params:
+        # otoole configuration file
+    input:
+        # output of solve_model
+    output:
+        # path to a folder to hold result csvs in results/
+    shell: 
+        # CLI command for otoole result processing 
+        # https://otoole.readthedocs.io/en/latest/examples.html#process-solutions-from-different-solvers
+
+
+"""
+This rule may cahnge slightly depending on how you want to extract results 
+"""
+rule format_results:
+    message:"Formating result data for [replace with wildcard]"
+    input:
+        # output of process_results
+    output:
+        # path to a folder to hold formatted result csvs in results/
+    script:
+         "scripts/format_results.py"
+
+rule clean:
+    shell:
+        "rm -rf results/"
