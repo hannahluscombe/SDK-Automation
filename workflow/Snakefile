@@ -1,97 +1,93 @@
 import pandas as pd
 
-URLS = pd.read_csv('resources/SDK_Data.csv', index_col='Country_Scenario')
+URLS = pd.read_csv("resources/SDK_Data.csv", index_col="Country_Scenario")
 SCENARIOS = URLS.index.to_list() # list of scenario names from csv - extract using pandas 
-OUTPUT_FILES = ['CapitalInvestment.csv', 'AnnualVariableOperatingCost.csv', 'AnnualFixedOperatingCost.csv'] # final files to be inputted into minfin (ie. CapaitalInvestment, AnnualFixedOperaingCost)
+OUTPUT_FILES = ["CapitalInvestment.csv", "AnnualVariableOperatingCost.csv", "AnnualFixedOperatingCost.csv"] # final files to be inputted into minfin (ie. CapaitalInvestment, AnnualFixedOperaingCost)
 
 def get_url(wildcards):
-    return URLS.at[wildcards.scenario, 'URL']
+    return URLS.at[wildcards.scenario, "URL"]
 
 rule all:
     input:
         expand("results/{scenario}/MinFin/{f}", scenario=SCENARIOS, f=OUTPUT_FILES)
 
 rule download_xlsx:
-    message:"Downloading xlsm [replace with wildcard] from Zenodo"
+    message:"Downloading xlsm {scenario} from Zenodo"
     params:
-        get_url
+        url = get_url
     output:
-        'results/{scenario}/{scenario}.xlsm'
+        xlsm = "results/{scenario}/{scenario}.xlsm"
     script: 
-        "scripts/download_xlsx.py"
+        "scripts/download_xlsm.py"
 
 rule extract_data:
-    message:"Extracted txt data for [replace with wildcard]"
+    message:"Extracted txt data for {scenario}"
     input:
-        'results/{scenario}/{scenario}.xlsm'
+        xlsm = "results/{scenario}/{scenario}.xlsm"
     output:
-        'results/{scenario}/{scenario}.txt'
+        txt = "results/{scenario}/{scenario}.txt"
     script: 
         "scripts/extract_data.py"
 
 rule preprocess_data:
-    message:"Pre-processing data for [replace with wildcard]"
+    message:"Pre-processing data for {scenario}"
+    params:
+        data_format = "momani" # (momani|otoole)
     input:
-        'results/{scenario}/{scenario}.txt'
+        txt = "results/{scenario}/{scenario}.txt"
     output:
-        'results/{scenario}/{scenario}_preprocessed.txt'
+        txt = "results/{scenario}/{scenario}_preprocessed.txt"
     script: 
         "scripts/preprocess.py"
 
 rule build_model:
-    message:"Building LP file for [replace with wildcard]"
+    message:"Building LP file for {scenario}"
     params:
-        'resources/osemosys.txt'
+        model = "resources/osemosys.txt"
     input:
-        'results/{scenario}/{scenario}_preprocessed.txt'
+        data = "results/{scenario}/{scenario}_preprocessed.txt"
     output:
-        # LP file in results/
-        # will turn this to a temp file since these files can be large
-        # https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#protected-and-temporary-files
-        'results/{scenario}/{scenario}.lp'
+        lp = temp("results/{scenario}/{scenario}.lp")
     shell: 
         # glpk command to build an LP file 
-        ''
+        ""
 
 rule solve_model:
-    message:"Solving model for [replace with wildcard]"
+    message:"Solving model for {scenario}"
     params:
         # solver selection (cbc|gurobi|cplex)
-        ''
+        solver = ""
     input:
-        'results/{scenario}/{scenario}.lp'
+        lp = "results/{scenario}/{scenario}.lp"
     output:
-        # solution file in results/
-        # will turn this to a temp file since these files can be large
-        # https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#protected-and-temporary-files
-        'results/{scenario}/{scenario}.sol'
+        sol = temp("results/{scenario}/{scenario}.sol")
     shell: 
         # solver command to solve a model and write results to a file 
-        ''
+        ""
 
 rule process_results:
-    message:"Processing results for [replace with wildcard]"
+    message:"Processing results for {scenario}"
     params:
-        # otoole configuration file
+        otoole_config = "resources/otoole.yaml",
+        results_dir = "results/{scenario}/results"
     input:
-        'results/{scenario}/{scenario}.sol'
+        sol = "results/{scenario}/{scenario}.sol"
     output:
-        expand('results/{{scenario}}/results/{csv}', csv=OUTPUT_FILES)
+        expand("results/{{scenario}}/results/{csv}", csv=OUTPUT_FILES)
     shell: 
         # CLI command for otoole result processing 
         # https://otoole.readthedocs.io/en/latest/examples.html#process-solutions-from-different-solvers
-        ''
-
+        ""
 
 """
 This rule may cahnge slightly depending on how you want to extract results 
 """
 rule format_results:
-    message:"Formating result data for [replace with wildcard]"
+    message:"Formating result data for {scenario}"
     input:
-        expand('results/{{scenario}}/results/{csv}', csv=OUTPUT_FILES)
+        expand("results/{{scenario}}/results/{csv}", csv=OUTPUT_FILES)
     output:
-        expand('results/{{scenario}}/MinFin/{csv}', csv=OUTPUT_FILES)
+        expand("results/{{scenario}}/MinFin/{csv}", csv=OUTPUT_FILES)
     script:
          "scripts/format_results.py"
 
@@ -101,4 +97,4 @@ rule clean:
 
 rule make_dag:
     shell:
-        'snakemake --dag all | dot -Tpdf > dag.pdf'
+        "snakemake --dag all | dot -Tpdf > dag.pdf"
