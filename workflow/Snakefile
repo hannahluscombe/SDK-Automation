@@ -92,7 +92,7 @@ rule process_results:
         solver = SOLVER
     input:
         sol = "results/{scenario}/{scenario}.sol",
-        data = "results/{scenario}/{scenario}_simple.txt"
+        data = "results/{scenario}/{scenario}_simple.txt" # do not use pre-processed! 
     output:
         expand("results/{{scenario}}/results/{csv}", csv=OUTPUT_FILES)
     shell: 
