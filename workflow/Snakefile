@@ -58,7 +58,7 @@ rule build_model:
     input:
         data = "results/{scenario}/{scenario}_preprocessed.txt"
     output:
-        lp = "results/{scenario}/{scenario}.lp"
+        lp = temp("results/{scenario}/{scenario}.lp")
     shell: 
         "glpsol -m {params.model} -d {input.data} --wlp {output.lp} --check"
 
@@ -70,7 +70,7 @@ rule solve_model:
     input:
         lp = "results/{scenario}/{scenario}.lp"
     output:
-        sol = "results/{scenario}/{scenario}.sol"
+        sol = temp("results/{scenario}/{scenario}.sol")
     shell: 
         """
         if [ {params.solver} = gurobi ]
