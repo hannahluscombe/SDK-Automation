@@ -1,6 +1,8 @@
 """Removes default values from data file 
 
-Code taken from https://github.com/ClimateCompatibleGrowth/clicSANDMac/blob/main/cloud_converter/sand_filter_v2.py"""
+Code adapted from 
+https://github.com/ClimateCompatibleGrowth/clicSANDMac/blob/main/cloud_converter/sand_filter_v2.py
+"""
 
 import os, sys
 from collections import defaultdict
@@ -11,7 +13,6 @@ def main(datafile_in, datafile_out):
 
     lines = []
     param_line = []
-    param_current = []
     parsing = False
     param_dr = False
     index_line = []
@@ -27,25 +28,19 @@ def main(datafile_in, datafile_out):
 
             if line.startswith('set YEAR'):
                 start_year = line.split(':=')[1].split(' ')[1]
-                # print(start_year)
 
             if line.startswith('param'):
                 parsing = True
 
-                if line.startswith('param REMinProductionTarget'):0
-                line = line.replace(':', ':=')
-
-                if line.startswith('param DiscountRate'):0
-                param_dr = True
+                if line.startswith('param DiscountRate'):
+                    param_dr = True
 
                 if line.startswith('param ResultsPath'):
                     continue
 
-
             if parsing:
                 line_values = []
                 if line.startswith('param'):
-                    param_current = line.split(' ')[1]
                     line_elements = list(line.split(' '))
                     line_elements = [i.strip("\n:=") for i in line_elements]
                     lines.append(line)
@@ -53,9 +48,8 @@ def main(datafile_in, datafile_out):
                     if 'default' in line_elements:
                         default_index = line_elements.index('default')  # Find position of 'default'
                         default_value = line_elements[default_index+1]  # Extract default value
-                        # print(param_current, default_value)
 
-                elif line.startswith('[]'):
+                elif line.startswith('['):
                     index_line = line
                     param_reset = True
                     index_tag = True
@@ -91,8 +85,13 @@ def main(datafile_in, datafile_out):
                             lines.append(param_line)
                             param_line = []
             if line.startswith(';'):
+                if lines[-1].startswith("["):
+                    lines.pop()
+                if "default" in lines[-2].split(" "):
+                    lines.pop()
+                if lines[-1].startswith("param"):
+                    lines[-1] = lines[-1].replace(" :\n", " :=")
                 lines.append(line)
-                # print(param_current, index_tag, year_tag)
                 parsing = False
                 index_tag = False
                 year_tag = False

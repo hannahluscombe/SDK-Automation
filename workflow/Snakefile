@@ -1,9 +1,10 @@
 import pandas as pd
 
 URLS = pd.read_csv("resources/SDK_Data.csv", index_col="Country_Scenario")
-SCENARIOS = URLS.index.to_list() # list of scenario names from csv - extract using pandas 
-OUTPUT_FILES = ["CapitalInvestment.csv", "AnnualVariableOperatingCost.csv", "AnnualFixedOperatingCost.csv"] # final files to be inputted into minfin (ie. CapaitalInvestment, AnnualFixedOperaingCost)
-SOLVER = 'cplex'
+SCENARIOS = URLS.index.to_list() 
+# OUTPUT_FILES = ["CapitalInvestment.csv", "AnnualVariableOperatingCost.csv", "AnnualFixedOperatingCost.csv"]
+OUTPUT_FILES = ["AnnualVariableOperatingCost.csv", "AnnualFixedOperatingCost.csv"]
+SOLVER = "cplex"
 
 def get_url(wildcards):
     return URLS.at[wildcards.scenario, "URL"]
@@ -22,7 +23,7 @@ rule download_xlsx:
         "scripts/download_xlsm.py"
 
 rule extract_data:
-    message:"Extracted txt data for {wildcards.scenario}"
+    message:"Extracting txt data for {wildcards.scenario}"
     input:
         xlsm = "results/{scenario}/{scenario}.xlsm"
     output:
@@ -53,13 +54,13 @@ rule preprocess_data:
 rule build_model:
     message:"Building LP file for {wildcards.scenario}"
     params:
-        model = "resources/osemosys.txt"
+        model = "resources/osemosys_pp.txt"
     input:
         data = "results/{scenario}/{scenario}_preprocessed.txt"
     output:
-        lp = temp("results/{scenario}/{scenario}.lp")
+        lp = "results/{scenario}/{scenario}.lp"
     shell: 
-        'glpsol -m {params.model} -d {input.data} --wlp {output.lp} --check'
+        "glpsol -m {params.model} -d {input.data} --wlp {output.lp} --check"
 
 
 rule solve_model:
@@ -69,9 +70,9 @@ rule solve_model:
     input:
         lp = "results/{scenario}/{scenario}.lp"
     output:
-        sol = temp("results/{scenario}/{scenario}.sol")
+        sol = "results/{scenario}/{scenario}.sol"
     shell: 
-        '''
+        """
         if [ {params.solver} = gurobi ]
         then
           gurobi_cl Method=2 ResultFile={output.sol} {input.lp}
@@ -81,7 +82,7 @@ rule solve_model:
         else
           cbc {input.lp} solve -sec 1500 -solu {output.sol}
         fi
-        '''
+        """
 
 rule process_results:
     message:"Processing results for {wildcards.scenario}"
@@ -91,12 +92,10 @@ rule process_results:
         solver = SOLVER
     input:
         sol = "results/{scenario}/{scenario}.sol",
-        data = "results/{scenario}/{scenario}_preprocessed.txt"
+        data = "results/{scenario}/{scenario}_simple.txt"
     output:
         expand("results/{{scenario}}/results/{csv}", csv=OUTPUT_FILES)
     shell: 
-        # CLI command for otoole result processing 
-        # https://otoole.readthedocs.io/en/latest/examples.html#process-solutions-from-different-solvers
         "otoole results {params.solver} csv {input.sol} {params.results_dir} datafile {input.data} {params.otoole_config}"
 
 """
@@ -104,16 +103,20 @@ This rule may cahnge slightly depending on how you want to extract results
 """
 rule format_results:
     message:"Formating result data for {wildcards.scenario}"
+    params:
+        minfin_files = OUTPUT_FILES,
+        in_dir = "results/{scenario}/results/",
+        out_dir = "results/{scenario}/MinFin/"
     input:
         expand("results/{{scenario}}/results/{csv}", csv=OUTPUT_FILES)
     output:
         expand("results/{{scenario}}/MinFin/{csv}", csv=OUTPUT_FILES)
     script:
-         "scripts/format_results.py"
+        "scripts/format_results.py"
 
 rule clean:
     shell:
-        "rm -rf results/"
+        "rm -r results/*/" # ignore the .gitkeep
 
 rule make_dag:
     shell:

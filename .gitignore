@@ -1,5 +1,7 @@
+# project specific
 results/*
 dag.pdf
+.snakemake/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
