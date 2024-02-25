@@ -87,7 +87,8 @@ def main(datafile_in, datafile_out):
             if line.startswith(';'):
                 if lines[-1].startswith("["):
                     lines.pop()
-                if "default" in lines[-2].split(" "):
+                # this is not a very robust solution :( 
+                if ("default" in lines[-2].split(" ")) and (len(lines[-1].split(" ")) > 2):
                     lines.pop()
                 if lines[-1].startswith("param"):
                     lines[-1] = lines[-1].replace(" :\n", " :=")
