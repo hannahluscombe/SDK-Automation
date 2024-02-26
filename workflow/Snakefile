@@ -43,6 +43,8 @@ rule simplify_data:
 
 rule update_data:
     message:"Updating data for pre-processing"
+    params: 
+        config = "resources/otoole.yaml"
     input:
         txt = "results/{scenario}/{scenario}_simple.txt"
     output:
