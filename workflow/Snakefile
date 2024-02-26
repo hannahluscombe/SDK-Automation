@@ -41,12 +41,21 @@ rule simplify_data:
     script: 
         "scripts/simplify.py"
 
+rule update_data:
+    message:"Updating data for pre-processing"
+    input:
+        txt = "results/{scenario}/{scenario}_simple.txt"
+    output:
+        txt = "results/{scenario}/{scenario}_updated_data.txt"
+    script:
+        "scripts/update_data.py"
+
 rule preprocess_data:
     message:"Pre-processing data for {wildcards.scenario}"
     params:
         data_format = "momani" # (momani|otoole)
     input:
-        txt = "results/{scenario}/{scenario}_simple.txt"
+        txt = "results/{scenario}/{scenario}_updated_data.txt"
     output:
         txt = "results/{scenario}/{scenario}_preprocessed.txt"
     script: 
