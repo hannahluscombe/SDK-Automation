@@ -15,9 +15,9 @@ def correct_data(data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
 
 if __name__ == "__main__":
     if "snakemake" in globals():
-        config = snakemake.inputs.config
-        data_in = snakemake.inputs.txt
-        data_out = snakemake.outputs.txt
+        config = snakemake.params.config
+        data_in = snakemake.input.txt
+        data_out = snakemake.output.txt
     else:
         if len(sys.argv) != 4: 
             msg = "Usage: python {} <otoole_config.yaml> <in_datafile.txt> <out_datafile.txt>"

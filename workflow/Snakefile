@@ -55,7 +55,7 @@ rule update_data:
 rule preprocess_data:
     message:"Pre-processing data for {wildcards.scenario}"
     params:
-        data_format = "momani" # (momani|otoole)
+        data_format = "otoole" # (momani|otoole)
     input:
         txt = "results/{scenario}/{scenario}_updated_data.txt"
     output:
