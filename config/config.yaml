@@ -2,10 +2,13 @@
 scenarios: resources/SDK_Data.csv
 
 # minfin data to extract
+# NOTE: these names must match names in 'format_data.py' module!
 minfin_files:
-  # - CapitalInvestment
-  - AnnualVariableOperatingCost
-  - AnnualFixedOperatingCost
+  - PWR_CapitalInvestment
+  - MIN_AnnualVariableOperatingCost
+  - PWR_AnnualVariableOperatingCost
+  - PWR_AnnualFixedOperatingCost
+  - PWR_ProductionByTechnologyAnnual
     
 # solver (cbc|cplex|gurobi)
 solver: cplex

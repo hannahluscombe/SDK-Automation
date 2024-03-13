@@ -4,7 +4,14 @@ configfile: "config/config.yaml"
 
 URLS = pd.read_csv(config["scenarios"], index_col="Country_Scenario")
 SCENARIOS = URLS.index.to_list() 
-OUTPUT_FILES = config["minfin_files"]
+MINFIN_FILES = config["minfin_files"]
+# quite an ugly implementation to track otoole files, but gets the job done i guess
+OTOOLE_FILES = [
+    "CapitalInvestment",
+    "AnnualVariableOperatingCost",
+    "AnnualFixedOperatingCost",
+    "ProductionByTechnologyAnnual"
+]
 SOLVER = config["solver"]
 
 def get_url(wildcards):
@@ -12,7 +19,7 @@ def get_url(wildcards):
 
 rule all:
     input:
-        expand("results/{scenario}/MinFin/{f}.csv", scenario=SCENARIOS, f=OUTPUT_FILES)
+        expand("results/{scenario}/MinFin/{f}.csv", scenario=SCENARIOS, f=MINFIN_FILES)
 
 rule download_xlsx:
     message:"Downloading xlsm {wildcards.scenario} from Zenodo"
@@ -106,23 +113,20 @@ rule process_results:
         sol = "results/{scenario}/{scenario}.sol",
         data = "results/{scenario}/{scenario}_simple.txt" # do not use pre-processed! 
     output:
-        expand("results/{{scenario}}/results/{csv}.csv", csv=OUTPUT_FILES)
+        expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_FILES)
     shell: 
         "otoole results {params.solver} csv {input.sol} {params.results_dir} datafile {input.data} {params.otoole_config}"
 
-"""
-This rule may cahnge slightly depending on how you want to extract results 
-"""
 rule format_results:
     message:"Formating result data for {wildcards.scenario}"
     params:
-        minfin_files = expand("{csv}.csv", csv=OUTPUT_FILES),
+        minfin_files = expand("{csv}.csv", csv=MINFIN_FILES),
         in_dir = "results/{scenario}/results/",
         out_dir = "results/{scenario}/MinFin/"
     input:
-        expand("results/{{scenario}}/results/{csv}.csv", csv=OUTPUT_FILES)
+        expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_FILES)
     output:
-        expand("results/{{scenario}}/MinFin/{csv}.csv", csv=OUTPUT_FILES)
+        expand("results/{{scenario}}/MinFin/{csv}.csv", csv=MINFIN_FILES)
     script:
         "scripts/format_results.py"
 
