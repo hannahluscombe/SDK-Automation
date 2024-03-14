@@ -1,5 +1,8 @@
 # path to sdk scenarios csv
-scenarios: resources/SDK_Data.csv
+scenarios: config/SDK_Data.csv
+
+# solver (cbc|cplex|gurobi)
+solver: cplex
 
 # minfin data to extract
 # NOTE: these names must match names in 'format_data.py' module!
@@ -9,6 +12,3 @@ minfin_files:
   - PWR_AnnualVariableOperatingCost
   - PWR_AnnualFixedOperatingCost
   - PWR_ProductionByTechnologyAnnual
-    
-# solver (cbc|cplex|gurobi)
-solver: cplex

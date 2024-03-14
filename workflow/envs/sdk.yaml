@@ -4,4 +4,9 @@ channels:
   - bioconda
 dependencies:
   - python=3
-  # add in more! 
+  - pandas
+  - openpyxl
+  - snakemake-minimal
+  - pip
+  - pip:
+    - otoole">="1.1.2
