@@ -9,4 +9,4 @@ dependencies:
   - snakemake-minimal
   - pip
   - pip:
-    - otoole">="1.1.2
+    - otoole>=1.1.2

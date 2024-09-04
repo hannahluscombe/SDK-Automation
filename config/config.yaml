@@ -4,6 +4,9 @@ scenarios: config/SDK_Data.csv
 # solver (cbc|cplex|gurobi)
 solver: cplex
 
+model: "resources/osemosys_pp.txt"
+otoole: "resources/otoole.yaml"
+
 # minfin data to extract
 # NOTE: these names must match names in 'format_data.py' module!
 minfin_files:
