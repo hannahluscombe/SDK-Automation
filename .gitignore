@@ -2,6 +2,7 @@
 results/*
 dag.pdf
 .snakemake/*
+.vscode/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
