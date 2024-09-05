@@ -1,29 +1,5 @@
 """General rules for model building and solving"""
 
-def get_otoole_results(otoole_config: str) -> list[str]:
-    """Gets result files to be created"""
-
-    with open(otoole_config) as f:
-        otoole = yaml.safe_load(f)
-
-    results = [x for x in otoole if otoole[x]["type"] == "result"]
-
-    missing = [
-        "NewStorageCapacity",
-        "NumberOfNewTechnologyUnits",
-        "SalvageValueStorage",
-        "StorageLevelDayTypeStart",
-        "StorageLevelDayTypeFinish",
-        "StorageLevelSeasonStart",
-        "StorageLevelSeasonFinish",
-        "StorageLevelYearStart",
-        "StorageLevelYearFinish",
-        "Trade",
-    ]
-
-    return [x for x in results if x not in missing]
-
-OTOOLE_FILES = get_otoole_results(config["otoole"])
 
 rule simplify_data:
     message:"Simplifying data for {wildcards.scenario}"

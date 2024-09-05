@@ -10,6 +10,31 @@ include: "rules/minfin.smk"
 URLS = pd.read_csv(config["scenarios"], index_col="Country_Scenario")
 SCENARIOS = URLS.index.to_list() 
 
+def get_otoole_results(otoole_config: str) -> list[str]:
+    """Gets result files to be created"""
+
+    with open(otoole_config) as f:
+        otoole = yaml.safe_load(f)
+
+    results = [x for x in otoole if otoole[x]["type"] == "result"]
+
+    missing = [
+        "NewStorageCapacity",
+        "NumberOfNewTechnologyUnits",
+        "SalvageValueStorage",
+        "StorageLevelDayTypeStart",
+        "StorageLevelDayTypeFinish",
+        "StorageLevelSeasonStart",
+        "StorageLevelSeasonFinish",
+        "StorageLevelYearStart",
+        "StorageLevelYearFinish",
+        "Trade",
+    ]
+
+    return [x for x in results if x not in missing]
+
+OTOOLE_FILES = get_otoole_results(config["otoole"])
+
 rule all:
     input:
         expand("results/{scenario}/results/{csv}.csv",scenario=SCENARIOS, csv=OTOOLE_FILES)
@@ -17,6 +42,10 @@ rule all:
 rule minfin:
     input:
         expand("results/{scenario}/MinFin/{f}.csv", scenario=SCENARIOS, f=MINFIN_FILES)
+
+rule emission_curves:
+    input:
+        expand("results/{scenario}/emission_curves/cost_curve.png")
 
 rule clean:
     shell:
