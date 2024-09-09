@@ -76,6 +76,7 @@ if __name__ == "__main__":
             output = sys.argv[5]
 
     emissions = pd.read_csv(annual_emissions, index_col=[0, 1, 2])
+    
     if method not in ("linear", "exp"):
         print(f"{method} not a supported reduction method. Setting to 'linear'")
         method = "linear"

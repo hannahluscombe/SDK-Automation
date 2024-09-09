@@ -1,8 +1,11 @@
-# path to sdk scenarios csv
-scenarios: config/SDK_Data.csv
+# path to sdk scenarios
+run: "custom" # (zenodo|custom)
+scenario:
+  zenodo: config/SDK_zenodo.csv
+  custom: config/SDK_custom.csv
 
-# solver (cbc|cplex|gurobi)
-solver: cplex
+# solver 
+solver: cplex # (cbc|cplex|gurobi)
 
 # osemosys setup 
 model: "resources/osemosys_pp.txt"

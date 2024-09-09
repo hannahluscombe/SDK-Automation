@@ -2,7 +2,7 @@
 
 
 rule simplify_data:
-    message:"Simplifying data for {wildcards.scenario}"
+    message:"Simplifying data for scenario {wildcards.scenario}"
     input:
         txt = "results/{scenario}/{scenario}.txt"
     output:
@@ -10,11 +10,25 @@ rule simplify_data:
     script: 
         "../scripts/simplify.py"
 
-rule update_data:
-    message:"Updating data for pre-processing"
+rule create_new_discount_rate:
+    message:"Creating new discount rate data for {wildcards.scenario}"
+    params:
+        region = "RE1",
+        discount_rate = "0.05"
+    output:
+        csv = "results/{scenario}/updates/DiscountRate.csv"
+    run:
+        data = [[params.region, params.discount_rate]]
+        df = pd.DataFrame(data, columns=["REGION", "VALUE"])
+        df.to_csv(output.csv, index=False)
+
+rule update_discount_rate:
+    message:"Updating data for scenario {wildcards.scenario}"
     params: 
-        config = "resources/otoole.yaml"
+        config = "resources/otoole.yaml",
+        parameter = "DiscountRate"
     input:
+        csv = "results/{scenario}/updates/DiscountRate.csv",
         txt = "results/{scenario}/{scenario}_simple.txt"
     output:
         txt = "results/{scenario}/{scenario}_updated_data.txt"
@@ -22,7 +36,7 @@ rule update_data:
         "../scripts/update_data.py"
 
 rule preprocess_data:
-    message:"Pre-processing data for {wildcards.scenario}"
+    message:"Pre-processing data for scenario {wildcards.scenario}"
     params:
         data_format = "otoole" # (momani|otoole)
     input:

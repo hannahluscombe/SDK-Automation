@@ -3,12 +3,13 @@ import yaml
 
 configfile: "config/config.yaml"
 
-include: "rules/sdk.smk"
-include: "rules/model.smk"
-include: "rules/minfin.smk"
+### 
+# Global Constants
+###
 
-URLS = pd.read_csv(config["scenarios"], index_col="Country_Scenario")
-SCENARIOS = URLS.index.to_list() 
+scenario_path = config["scenario"][config["run"]]
+SDKS = pd.read_csv(scenario_path, index_col="country_scenario")
+SCENARIOS = SDKS.index.to_list() 
 
 def get_otoole_results(otoole_config: str) -> list[str]:
     """Gets result files to be created"""
@@ -35,6 +36,27 @@ def get_otoole_results(otoole_config: str) -> list[str]:
 
 OTOOLE_FILES = get_otoole_results(config["otoole"])
 
+###
+# Rules based on output
+###
+
+include: "rules/sdk.smk"
+include: "rules/model.smk"
+include: "rules/minfin.smk"
+include: "rules/emissions.smk"
+
+###
+# Global wildcard constarints
+###
+
+wildcard_constraints:
+    scenario = "|".join([re.escape(x) for x in SCENARIOS]),
+    emission_reduction = r"\d+"
+
+###
+# Exit conditions
+###
+
 rule all:
     input:
         expand("results/{scenario}/results/{csv}.csv",scenario=SCENARIOS, csv=OTOOLE_FILES)
@@ -45,7 +67,11 @@ rule minfin:
 
 rule emission_curves:
     input:
-        expand("results/{scenario}/emission_curves/cost_curve.png")
+        expand("results/{scenario}/emission_curves/abatement_cost_curve.png", scenario=SCENARIOS)
+
+###
+# Helpers
+###
 
 rule clean:
     shell:
@@ -53,4 +79,4 @@ rule clean:
 
 rule make_dag:
     shell:
-        "snakemake --dag all | dot -Tpdf > dag.pdf"
+        "snakemake --dag emission_curves | dot -Tpdf > dag.pdf"
