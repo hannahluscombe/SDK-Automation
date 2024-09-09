@@ -26,21 +26,36 @@ rule update_discount_rate:
     message:"Updating data for scenario {wildcards.scenario}"
     params: 
         config = "resources/otoole.yaml",
-        parameter = "DiscountRate"
+        parameter = "DiscountRate",
+        save_dir = "results/{scenario}/data/"
     input:
         csv = "results/{scenario}/updates/DiscountRate.csv",
         txt = "results/{scenario}/{scenario}_simple.txt"
     output:
-        txt = "results/{scenario}/{scenario}_updated_data.txt"
+        csvs = expand("results/{{scenario}}/data/{csv}.csv", csv=OTOOLE_DATA)
     script:
         "../scripts/update_data.py"
+
+rule create_datafile:
+    message:"Creating datafile for scenario {wildcards.scenario}"
+    params: 
+        config = "resources/otoole.yaml",
+        data_dir = "results/{scenario}/data/"
+    input:
+        csv = expand("results/{{scenario}}/data/{csv}.csv", csv=OTOOLE_DATA)
+    output:
+        txt = "results/{scenarios}/{scenario}_updated.txt"
+    shell:
+        """
+        otoole convert csv datafile {params.data_dir} {output.txt} {params.config}
+        """
 
 rule preprocess_data:
     message:"Pre-processing data for scenario {wildcards.scenario}"
     params:
         data_format = "otoole" # (momani|otoole)
     input:
-        txt = "results/{scenario}/{scenario}_updated_data.txt"
+        txt = "results/{scenario}/{scenario}_updated.txt"
     output:
         txt = "results/{scenario}/{scenario}_preprocessed.txt"
     script: 
@@ -83,12 +98,13 @@ rule process_results:
     message:"Processing results for {wildcards.scenario}"
     params:
         otoole_config = "resources/otoole.yaml",
+        data_dir = "results/{scenario}/data/",
         results_dir = "results/{scenario}/results", 
         solver = config["solver"]
     input:
         sol = "results/{scenario}/{scenario}.sol",
-        data = "results/{scenario}/{scenario}_simple.txt" # do not use pre-processed! 
+        data = expand("results/{{scenario}}/data/{csv}.csv", csv=OTOOLE_DATA)
     output:
-        expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_FILES)
+        expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_RESULTS)
     shell: 
-        "otoole results {params.solver} csv {input.sol} {params.results_dir} datafile {input.data} {params.otoole_config}"
+        "otoole results {params.solver} csv {input.sol} {params.results_dir} csv {params.data_dir} {params.otoole_config}"

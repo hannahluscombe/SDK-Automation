@@ -10,7 +10,7 @@ rule minfin_results:
         in_dir = "results/{scenario}/results/",
         out_dir = "results/{scenario}/MinFin/"
     input:
-        expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_FILES)
+        expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_RESULTS)
     output:
         expand("results/{{scenario}}/MinFin/{csv}.csv", csv=MINFIN_FILES)
     script:

@@ -39,7 +39,7 @@ if __name__ == "__main__":
         parameter = snakemake.params.parameter
         new_data = snakemake.input.csv
         txt_in = snakemake.input.txt
-        txt_out = snakemake.output.txt
+        save_dir = snakemake.params.save_dir
     else:
         if len(sys.argv) != 6:
             msg = "Usage: python {} <otoole_config.yaml> <parameter> <new_data.csv> <in_datafile.txt> <out_datafile.txt>"
@@ -50,7 +50,7 @@ if __name__ == "__main__":
             parameter = sys.argv[2]
             new_data = sys.argv[3]
             txt_in = sys.argv[4]
-            txt_out = sys.argv[5]
+            save_dir = sys.argv[5]
 
     data, defaults = read(config, "datafile", txt_in)
 
@@ -64,4 +64,4 @@ if __name__ == "__main__":
 
     data = update_data(data, parameter, df)
 
-    write(config, "datafile", txt_out, data, defaults)
+    write(config, "csv", save_dir, data, defaults)

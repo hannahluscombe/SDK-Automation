@@ -11,10 +11,10 @@ rule copy_emission_scenario_base:
         out_dir = "results/{scenario}/emission_curves/0_percent_reduction"
     input: 
         txt = "results/{scenario}/{scenario}_simple.txt",
-        results = expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_FILES),
+        results = expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_RESULTS),
     output:
         txt = "results/{scenario}/emission_curves/0_percent_reduction/data.txt",
-        results = expand("results/{{scenario}}/emission_curves/0_percent_reduction/results/{csv}.csv", csv=OTOOLE_FILES),
+        results = expand("results/{{scenario}}/emission_curves/0_percent_reduction/results/{csv}.csv", csv=OTOOLE_RESULTS),
     shell:
         """
         cp {input.txt} {output.txt} && cp -r {params.in_dir} {params.out_dir}
@@ -50,6 +50,8 @@ rule create_emission_reduction_dataframe:
     script:
         "../scripts/create_emission_curve.py"
 
+# outputting to CSVs first, as datafile was slow to read in for results processing
+
 rule update_annual_emission_limit:
     message:"Updating Emission Limit for scenario {wildcards.scenario} and {wildcards.emission_reduction}%% C02 reduction"
     wildcard_constraints:
@@ -57,18 +59,34 @@ rule update_annual_emission_limit:
         emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
     params: 
         config = "resources/otoole.yaml",
-        parameter = "AnnualEmissionLimit"
+        parameter = "AnnualEmissionLimit",
+        save_dir = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/data/"
     input:
         csv = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/updates/AnnualEmissionLimit.csv",
         txt = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}.txt"
     output:
-        txt = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}_co2L.txt"
+        csvs = expand("results/{{scenario}}/emission_curves/{{emission_reduction}}_percent_reduction/data/{csv}.csv", csv=OTOOLE_DATA)
     script:
         "../scripts/update_data.py"
 
+rule create_emission_datafile:
+    message:"Creating datafile for scenario {wildcards.scenario} and {wildcards.emission_reduction}% C02 reduction"
+    wildcard_constraints:
+        emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
+    params: 
+        config = "resources/otoole.yaml",
+        data_dir = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/data"
+    input:
+        csv = expand("results/{{scenario}}/emission_curves/{{emission_reduction}}_percent_reduction/data/{csv}.csv", csv=OTOOLE_DATA)
+    output:
+        txt = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}_co2L.txt"
+    shell:
+        """
+        otoole convert csv datafile {params.data_dir} {output.txt} {params.config}
+        """
 
 rule preprocess_emission_data:
-    message:"Pre-processing data for scenario {wildcards.scenario} and {wildcards.emission_reduction}%% C02 reduction"
+    message:"Pre-processing data for scenario {wildcards.scenario} and {wildcards.emission_reduction}% C02 reduction"
     wildcard_constraints:
         emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
         # emission_reduction=r"^(?!0$)\d+$"
@@ -93,7 +111,7 @@ rule build_emission_model:
     output:
         lp = temp("results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}.lp")
     resources:
-        mem_mb=2000
+        mem_mb=4000
     shell: 
         "glpsol -m {params.model} -d {input.data} --wlp {output.lp} --check"
 
@@ -110,7 +128,7 @@ rule solve_emission_model:
     output:
         sol = temp("results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}.sol")
     resources:
-        mem_mb=2000
+        mem_mb=4000
     shell: 
         """
         if [ {params.solver} = gurobi ]
@@ -124,6 +142,7 @@ rule solve_emission_model:
         fi
         """
 
+# Using the text file was taking forever to read. Changed to CSVs.
 rule process_emission_results:
     message:"Processing results for scenario {wildcards.scenario} and {wildcards.emission_reduction}%% C02 reduction"
     wildcard_constraints:
@@ -131,17 +150,16 @@ rule process_emission_results:
         # emission_reduction=r"^(?!0$)\d+$"
     params:
         otoole_config = "resources/otoole.yaml",
+        data_dir = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/data",
         results_dir = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/results", 
         solver = config["solver"]
     input:
         sol = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}.sol",
-        data = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}_co2L.txt" # do not use pre-processed! 
+        data = expand("results/{{scenario}}/emission_curves/{{emission_reduction}}_percent_reduction/data/{csv}.csv", csv=OTOOLE_DATA) 
     output:
-        expand("results/{{scenario}}/emission_curves/{{emission_reduction}}_percent_reduction/results/{csv}.csv", csv=OTOOLE_FILES)
-    resources:
-        mem_mb=8000
+        expand("results/{{scenario}}/emission_curves/{{emission_reduction}}_percent_reduction/results/{csv}.csv", csv=OTOOLE_RESULTS)
     shell: 
-        "otoole results {params.solver} csv {input.sol} {params.results_dir} datafile {input.data} {params.otoole_config}"
+        "otoole results {params.solver} csv {input.sol} {params.results_dir} csv {params.data_dir} {params.otoole_config}"
 
 rule extract_annual_emission_results:
     message: "Extracting Annual Emissions for scenario {wildcards.scenario}"

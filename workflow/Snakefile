@@ -11,13 +11,15 @@ scenario_path = config["scenario"][config["run"]]
 SDKS = pd.read_csv(scenario_path, index_col="country_scenario")
 SCENARIOS = SDKS.index.to_list() 
 
-def get_otoole_results(otoole_config: str) -> list[str]:
+def get_otoole_data(otoole_config: str, var: str) -> list[str]:
     """Gets result files to be created"""
+
+    assert var in ("param", "result", "set")
 
     with open(otoole_config) as f:
         otoole = yaml.safe_load(f)
 
-    results = [x for x in otoole if otoole[x]["type"] == "result"]
+    results = [x for x in otoole if otoole[x]["type"] == var]
 
     missing = [
         "NewStorageCapacity",
@@ -34,7 +36,8 @@ def get_otoole_results(otoole_config: str) -> list[str]:
 
     return [x for x in results if x not in missing]
 
-OTOOLE_FILES = get_otoole_results(config["otoole"])
+OTOOLE_DATA = get_otoole_data(config["otoole"], "param")
+OTOOLE_RESULTS = get_otoole_data(config["otoole"], "result")
 
 ###
 # Rules based on output
@@ -59,7 +62,7 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand("results/{scenario}/results/{csv}.csv",scenario=SCENARIOS, csv=OTOOLE_FILES)
+        expand("results/{scenario}/results/{csv}.csv",scenario=SCENARIOS, csv=OTOOLE_RESULTS)
 
 rule minfin:
     input:

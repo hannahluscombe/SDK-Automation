@@ -3,6 +3,16 @@
 import pandas as pd
 import sys
 from pathlib import Path
+import os
+
+
+def extract_emission_reduction_scenarios(results_dir: str, param: str) -> list[str]:
+    """Extracts emission reduction scenarios for running script locally"""
+
+    dirs = [f.path for f in os.scandir(results_dir) if f.is_dir()]
+    emission_dirs = [d for d in dirs if d.endswith("_percent_reduction")]
+
+    return [str(Path(x, "results", f"{param}.csv")) for x in emission_dirs]
 
 
 def is_valid_files(parameter: str, csvs: list[str]) -> bool:
@@ -32,16 +42,16 @@ def is_result_indices_unique(df: pd.DataFrame) -> bool:
     """Checks that only 1 unique value exist in the indices"""
 
     for col in df.columns:
-        if col == "VALUE":
+        if (col == "VALUE") or (col == "YEAR"):
             continue
         if len(df[col].unique()) != 1:
-            print(f"Column {col} contains the unique values of {df.unique()}")
+            print(f"Column {col} contains the unique values of {df[col].unique()}")
             return False
     return True
 
 
-def extract_data(csvs: list[str]) -> pd.DataFrame:
-    """Extracts result data into format
+def extract_data(csvs: list[str], **kwargs) -> pd.DataFrame:
+    """Extracts result data into format given below
 
     Where the index is the year and the column headers are the emission reducion
     targets. ie. 0 percent reducion, 10 percent reduction, ect...
@@ -60,6 +70,12 @@ def extract_data(csvs: list[str]) -> pd.DataFrame:
     for csv in csvs:
 
         df = pd.read_csv(csv)
+
+        for col, filter in kwargs.items():
+            if col in df.columns:
+                df = df[df[col] == filter].copy()
+
+        assert not df.empty
         assert is_result_indices_unique(df)
 
         reduction = extract_emission_reduction_percent(csv)
@@ -79,21 +95,33 @@ if __name__ == "__main__":
 
         parameter = snakemake.params.result
         in_csvs = snakemake.input
-        out_csv = snakemake.output
+        out_csv = str(snakemake.output)
 
     else:
 
         if len(sys.argv) != 4:
-            msg = "Usage: python {} <parameter> <[parameter.csv]> <summary.csv>"
+            msg = "Usage: python {} <parameter> <emission_red_dir> <summary.csv>"
             print(msg.format(sys.argv[0]))
             sys.exit(1)
         else:
             parameter = sys.argv[1]
-            in_csvs = sys.argv[2]
+            in_csv_dir = sys.argv[2]
             out_csv = sys.argv[3]
+
+            in_csvs = extract_emission_reduction_scenarios(in_csv_dir, parameter)
 
     assert is_valid_files(parameter, in_csvs)
 
-    df = extract_data(in_csvs)
+    match parameter:
+        case "AnnualEmissions":
+            kwargs = {"EMISSION": "EMIC02"}
+        case "TotalDiscountedCost":
+            kwargs = {}
+        case _:
+            kwargs = {}
+
+    df = extract_data(in_csvs, **kwargs)
+
+    df = df.round(4)
 
     df.to_csv(out_csv, index=True)
