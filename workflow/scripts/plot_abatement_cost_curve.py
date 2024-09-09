@@ -17,13 +17,13 @@ def is_valid_year(year: int, df: pd.DataFrame) -> bool:
 def are_valid_dataframes(df1: pd.DataFrame, df2: pd.DataFrame) -> bool:
     """Checks for valid index, columns between dataframes"""
 
-    if df1.index != df2.index:
+    if not df1.index.equals(df2.index):
         print("Indices between df1 and df2 are different\n")
         print(f"df1 index is {df1.index}\n")
         print(f"df2 index is {df2.index}\n")
         return False
 
-    if df1.columns != df2.columns:
+    if not df1.columns.equals(df2.columns):
         print("Columns between df1 and df2 are different\n")
         print(f"df1 columns is {df1.columns}\n")
         print(f"df2 columns is {df2.columns}\n")
@@ -39,7 +39,16 @@ def plot_abatement_curve(
     year_emissions = emissions.loc[year]
     year_costs = costs.loc[year]
 
+    df = pd.DataFrame({"Emissions": year_emissions, "Costs": year_costs}).set_index(
+        "Emissions"
+    )
+
     fig, ax = plt.subplots(1, 1)
+
+    df.plot(kind="area", ax=ax)
+
+    ax.set(xlabel="Emissions (MMT)", ylabel="Annual Discounted Cost (M$)")
+    fig.suptitle(f"Pareto Abatement Cost Curve for {year}")
 
     return fig, ax
 
@@ -50,7 +59,7 @@ if __name__ == "__main__":
         year = snakemake.params.year
         emissions_csv = snakemake.input.annual_emissions
         costs_csv = snakemake.input.total_cost
-        plot_png = snakemake.output.plot
+        plot_png = str(snakemake.output.plot)
 
     else:
 
