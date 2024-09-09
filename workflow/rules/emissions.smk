@@ -6,15 +6,18 @@ EMISSION_SCENARIOS = EMISSION_TARGETS.index.to_list()
 
 rule copy_emission_scenario_base:
     message: "Copying base emission scenario and results"
+    params:
+        in_dir = "results/{scenario}/results",
+        out_dir = "results/{scenario}/emission_curves/0_percent_reduction"
     input: 
         txt = "results/{scenario}/{scenario}_simple.txt",
-        results = expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_FILES)
+        results = expand("results/{{scenario}}/results/{csv}.csv", csv=OTOOLE_FILES),
     output:
         txt = "results/{scenario}/emission_curves/0_percent_reduction/data.txt",
-        results = expand("results/{{scenario}}/emission_curves/0_percent_reduction/results/{csv}.csv", csv=OTOOLE_FILES)
+        results = expand("results/{{scenario}}/emission_curves/0_percent_reduction/results/{csv}.csv", csv=OTOOLE_FILES),
     shell:
         """
-        cp {input.txt} {output.txt} && cp -r {input.results} {output.results}
+        cp {input.txt} {output.txt} && cp -r {params.in_dir} {params.out_dir}
         """
 
 rule create_emission_scenario_templates:
@@ -89,6 +92,8 @@ rule build_emission_model:
         data = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}_co2L_pp.txt"
     output:
         lp = temp("results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}.lp")
+    resources:
+        mem_mb=2000
     shell: 
         "glpsol -m {params.model} -d {input.data} --wlp {output.lp} --check"
 
@@ -104,6 +109,8 @@ rule solve_emission_model:
         lp = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}.lp"
     output:
         sol = temp("results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}.sol")
+    resources:
+        mem_mb=2000
     shell: 
         """
         if [ {params.solver} = gurobi ]
@@ -131,6 +138,8 @@ rule process_emission_results:
         data = "results/{scenario}/emission_curves/{emission_reduction}_percent_reduction/{scenario}_co2L.txt" # do not use pre-processed! 
     output:
         expand("results/{{scenario}}/emission_curves/{{emission_reduction}}_percent_reduction/results/{csv}.csv", csv=OTOOLE_FILES)
+    resources:
+        mem_mb=8000
     shell: 
         "otoole results {params.solver} csv {input.sol} {params.results_dir} datafile {input.data} {params.otoole_config}"
 

@@ -54,7 +54,7 @@ def create_emission_curves(
 if __name__ == "__main__":
 
     if "snakemake" in globals():
-        annual_emissions = snakemake.input.emissions
+        annual_emissions = snakemake.input.base_emissions
         reduction = float(snakemake.wildcards.emission_reduction)
         base_year = int(snakemake.params.base_year)
         method = snakemake.params.reduction_method
@@ -76,7 +76,7 @@ if __name__ == "__main__":
             output = sys.argv[5]
 
     emissions = pd.read_csv(annual_emissions, index_col=[0, 1, 2])
-    
+
     if method not in ("linear", "exp"):
         print(f"{method} not a supported reduction method. Setting to 'linear'")
         method = "linear"
@@ -85,4 +85,4 @@ if __name__ == "__main__":
         emissions, reduction, base_year, region, emission, method
     )
 
-    curve.to_csv(output)
+    curve.to_csv(str(output), index=True)
