@@ -2,12 +2,31 @@
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import sys
+
+
+def get_valid_scenarios(csv: str) -> list[int]:
+    df = pd.read_csv(csv, dtype={"reduction": int, "valid": bool})
+    return df[df.valid == True].reduction.to_list()
+
+
+def filter_on_valid_scenarios(
+    df: pd.DataFrame, valid_scenarios: list[int | str]
+) -> pd.DataFrame:
+    """Filters results on valid scenarios"""
+
+    valid_scenarios.sort()
+    valid_scenarios = [str(x) for x in valid_scenarios]
+
+    scenarios = df.columns
+
+    return df[[x for x in scenarios if x in valid_scenarios]]
 
 
 def is_valid_year(year: int, df: pd.DataFrame) -> bool:
     """Checks for valid year"""
 
-    if year in df.index:
+    if int(year) in df.index:
         return True
     else:
         print(f"{year} not in index values of {df.index}")
@@ -36,6 +55,8 @@ def plot_abatement_curve(
     year: int, emissions: pd.DataFrame, costs: pd.DataFrame
 ) -> tuple:
 
+    year = int(year)
+
     year_emissions = emissions.loc[year]
     year_costs = costs.loc[year]
 
@@ -57,24 +78,31 @@ if __name__ == "__main__":
 
     if "snakemake" in globals():
         year = snakemake.params.year
+        valid_scenarios_csv = snakemake.input.valid
         emissions_csv = snakemake.input.annual_emissions
         costs_csv = snakemake.input.total_cost
         plot_png = str(snakemake.output.plot)
 
     else:
 
-        if len(sys.argv) != 5:
-            msg = "Usage: python {} <year> <annual_emissions.csv> <total_costs.csv> <plot.png>"
+        if len(sys.argv) != 6:
+            msg = "Usage: python {} <year> <valid_scenarios.csv> <annual_emissions.csv> <total_costs.csv> <plot.png>"
             print(msg.format(sys.argv[0]))
             sys.exit(1)
         else:
             year = sys.argv[1]
-            emissions_csv = sys.argv[2]
-            costs_csv = sys.argv[3]
-            plot_png = sys.argv[3]
+            valid_scenarios_csv = sys.argv[2]
+            emissions_csv = sys.argv[3]
+            costs_csv = sys.argv[4]
+            plot_png = sys.argv[5]
 
     emissions = pd.read_csv(emissions_csv, index_col=[0])
     costs = pd.read_csv(costs_csv, index_col=[0])
+
+    if valid_scenarios_csv:
+        valid_scenarios = get_valid_scenarios(valid_scenarios_csv)
+        emissions = filter_on_valid_scenarios(emissions, valid_scenarios)
+        costs = filter_on_valid_scenarios(costs, valid_scenarios)
 
     assert is_valid_year(year, emissions)
     assert is_valid_year(year, costs)

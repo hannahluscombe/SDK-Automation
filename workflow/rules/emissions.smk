@@ -1,7 +1,7 @@
 """Generates Emission Abatement Curves"""
 
 
-EMISSION_TARGETS = pd.read_csv(config["emission_config"], index_col="emission_reduction")
+EMISSION_TARGETS = pd.read_csv(config["emission_abatement"]["config"], index_col="emission_reduction")
 EMISSION_SCENARIOS = EMISSION_TARGETS.index.to_list()
 
 rule copy_emission_scenario_base:
@@ -39,8 +39,8 @@ rule create_emission_reduction_dataframe:
         emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
     params: 
         config = "resources/otoole.yaml",
-        base_year = config["emission_base_year"],
-        reduction_method = config["emission_reduction_method"],
+        base_year = config["emission_abatement"]["base_year"],
+        reduction_method = config["emission_abatement"]["reduction_method"],
         region = "RE1",
         emission = "EMIC02"
     input:
@@ -53,7 +53,7 @@ rule create_emission_reduction_dataframe:
 # outputting to CSVs first, as datafile was slow to read in for results processing
 
 rule update_annual_emission_limit:
-    message:"Updating Emission Limit for scenario {wildcards.scenario} and {wildcards.emission_reduction}%% C02 reduction"
+    message:"Updating Emission Limit for scenario {wildcards.scenario} and {wildcards.emission_reduction}% C02 reduction"
     wildcard_constraints:
         # emission_reduction=r"^(?!0$)\d+$"
         emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
@@ -100,7 +100,7 @@ rule preprocess_emission_data:
         "../scripts/preprocess.py"
 
 rule build_emission_model:
-    message:"Building LP file for scenario {wildcards.scenario} and {wildcards.emission_reduction}%% C02 reduction"
+    message:"Building LP file for scenario {wildcards.scenario} and {wildcards.emission_reduction}% C02 reduction"
     wildcard_constraints:
         emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
         # emission_reduction=r"^(?!0$)\d+$"
@@ -117,7 +117,7 @@ rule build_emission_model:
 
 
 rule solve_emission_model:
-    message:"Solving model for scenario {wildcards.scenario} and {wildcards.emission_reduction}%% C02 reduction"
+    message:"Solving model for scenario {wildcards.scenario} and {wildcards.emission_reduction}% C02 reduction"
     wildcard_constraints:
         emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
         # emission_reduction=r"^(?!0$)\d+$"
@@ -144,7 +144,7 @@ rule solve_emission_model:
 
 # Using the text file was taking forever to read. Changed to CSVs.
 rule process_emission_results:
-    message:"Processing results for scenario {wildcards.scenario} and {wildcards.emission_reduction}%% C02 reduction"
+    message:"Processing results for scenario {wildcards.scenario} and {wildcards.emission_reduction}% C02 reduction"
     wildcard_constraints:
         emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
         # emission_reduction=r"^(?!0$)\d+$"
@@ -160,6 +160,15 @@ rule process_emission_results:
         expand("results/{{scenario}}/emission_curves/{{emission_reduction}}_percent_reduction/results/{csv}.csv", csv=OTOOLE_RESULTS)
     shell: 
         "otoole results {params.solver} csv {input.sol} {params.results_dir} csv {params.data_dir} {params.otoole_config}"
+
+rule valid_emission_scenario:
+    message: "Checking results for scenario {wildcards.scenario} and {wildcards.emission_reduction}% C02 reduction"
+    input:
+        csvs = expand("results/{{scenario}}/emission_curves/{emission_reduction}_percent_reduction/results/AnnualEmissions.csv", emission_reduction=EMISSION_SCENARIOS)
+    output:
+        csv = "results/{scenario}/emission_curves/valid_scenarios.csv"
+    script:
+        "../scripts/valid_emission_scenario.py"
 
 rule extract_annual_emission_results:
     message: "Extracting Annual Emissions for scenario {wildcards.scenario}"
@@ -183,11 +192,18 @@ rule extract_discounted_cost_results:
     script: 
         "../scripts/extract_emission_result.py"
 
+def check_for_valid_scenario(wildcards) -> str | list[str]:
+    if config["emission_abatement"]["include_backstop"]:
+        return []
+    else
+        return "results/{scenario}/emission_curves/valid_scenarios.csv"
+
 rule plot_abatement_cost_curve:
     message: "Plotting Abatement Cost Curve for {wildcards.scenario}"
     params:
-        year = config["emission_base_year"]
+        year = config["emission_abatement"]["base_year"]
     input:
+        valid = check_for_valid_scenario(wildcards)
         annual_emissions = "results/{scenario}/emission_curves/AnnualEmissions.csv",
         total_cost = "results/{scenario}/emission_curves/TotalDiscountedCost.csv"
     output:
