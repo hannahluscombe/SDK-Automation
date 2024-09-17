@@ -27,10 +27,11 @@ rule update_discount_rate:
     params: 
         config = "resources/otoole.yaml",
         parameter = "DiscountRate",
-        save_dir = "results/{scenario}/data/"
+        save_dir = "results/{scenario}/data/",
+        data_input_type = "datafile"
     input:
         csv = "results/{scenario}/updates/DiscountRate.csv",
-        txt = "results/{scenario}/{scenario}_simple.txt"
+        data_in = "results/{scenario}/{scenario}_simple.txt"
     output:
         csvs = expand("results/{{scenario}}/data/{csv}.csv", csv=OTOOLE_DATA)
     script:
