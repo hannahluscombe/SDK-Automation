@@ -1,7 +1,7 @@
 """Generates Emission Abatement Curves"""
 
 
-EMISSION_TARGETS = pd.read_csv(config["emission_abatement"]["config"], index_col="emission_reduction")
+EMISSION_TARGETS = pd.read_csv(config["emission_curves"]["config"], index_col="emission_reduction")
 EMISSION_SCENARIOS = EMISSION_TARGETS.index.to_list()
 
 rule copy_emission_scenario_base:
@@ -27,8 +27,8 @@ rule create_emission_reduction_dataframe:
         emission_reduction="|".join([str(x) for x in EMISSION_SCENARIOS if x != 0])
     params: 
         config = "resources/otoole.yaml",
-        base_year = config["emission_abatement"]["base_year"],
-        reduction_method = config["emission_abatement"]["reduction_method"],
+        base_year = config["emission_curves"]["base_year"],
+        reduction_method = config["emission_curves"]["reduction_method"],
         region = "RE1",
         emission = "EMIC02"
     input:
@@ -182,7 +182,7 @@ rule extract_discounted_cost_results:
         "../scripts/extract_emission_result.py"
 
 def check_for_valid_scenario(wildcards) -> str | list[str]:
-    if config["emission_abatement"]["include_backstop"]:
+    if config["emission_curves"]["include_backstop"]:
         return []
     else:
         return "results/{scenario}/emission_curves/valid_scenarios.csv"
@@ -190,7 +190,7 @@ def check_for_valid_scenario(wildcards) -> str | list[str]:
 rule plot_abatement_cost_curve:
     message: "Plotting Abatement Cost Curve for {wildcards.scenario}"
     params:
-        year = config["emission_abatement"]["base_year"]
+        year = config["emission_curves"]["base_year"]
     input:
         valid = check_for_valid_scenario,
         annual_emissions = "results/{scenario}/emission_curves/AnnualEmissions.csv",

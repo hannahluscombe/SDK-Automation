@@ -12,7 +12,7 @@ model: "resources/osemosys_pp.txt"
 otoole: "resources/otoole.yaml"
 
 # emission abatement config
-emission_abatement:
+emission_curves:
   config: "config/emission_curves.csv"
   base_year: 2050
   reduction_method: "linear" # (linear|exp)
