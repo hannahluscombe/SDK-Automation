@@ -12,9 +12,11 @@ model: "resources/osemosys_pp.txt"
 otoole: "resources/otoole.yaml"
 
 # emission abatement config
-emission_config: "config/emission_curves.csv"
-emission_base_year: 2050
-emission_reduction_method: "linear" # (linear|exp)
+emission_abatement:
+  config: "config/emission_curves.csv"
+  base_year: 2050
+  reduction_method: "linear" # (linear|exp)
+  include_backstop: False
 
 # minfin data to extract
 # NOTE: these names must match names in 'format_data.py' module!
